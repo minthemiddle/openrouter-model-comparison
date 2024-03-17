@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>OpenRouter Model Comparison</title>
+        <!-- For Dev: <link
+            rel="stylesheet"
+            href="https://cdn.curlwind.com?classes=w-full,border,py-2,container,mx-auto,ml-2,text-xl,font-bold,px-4,py-5,mt-4,rounded,bg-red-500,,text-white,hover:bg-red-700"
+        /> -->
+        <link rel="stylesheet" href="style.css" />
+        <script
+            src="https://cdn.jsdelivr.net/npm/alpinejs@3.9.2/dist/cdn.min.js"
+            defer
+        ></script>
+    </head>
+    <body>
+        <div
+            x-data="modelTable()"
+            x-init="fetchData()"
+            class="container mx-auto px-4 py-5"
+        >
+            <h1 class="ml-2 text-xl font-bold">OpenRouter Models</h1>
+            <div class="mt-4">
+                <input
+                    type="text"
+                    x-model="searchQuery"
+                    placeholder="Search by ID (e.g. gpt|claude|mistral)"
+                    class="w-full border px-4 py-2"
+                />
+            </div>
+            <table class="mt-4 w-full border-collapse text-left">
+                <thead>
+                    <tr>
+                        <th class="border px-4 py-2">ID</th>
+                        <th class="border px-4 py-2">Name</th>
+                        <th
+                            class="border px-4 py-2"
+                            @click="sort('pricing.prompt')"
+                        >
+                            Prompt (mio.)
+                        </th>
+                        <th
+                            class="border px-4 py-2"
+                            @click="sort('pricing.completion')"
+                        >
+                            Completion (mio.)
+                        </th>
+                        <th class="border px-4 py-2">Context (k)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="model in filteredModels" :key="model.id">
+                        <tr>
+                            <td class="border px-4 py-2" x-text="model.id"></td>
+                            <td
+                                class="border px-4 py-2"
+                                x-text="model.name"
+                            ></td>
+                            <td
+                                class="border px-4 py-2"
+                                x-text="Number(model.pricing.prompt * 1000000).toFixed(2)"
+                            ></td>
+                            <td
+                                class="border px-4 py-2"
+                                x-text="Number(model.pricing.completion * 1000000).toFixed(2)"
+                            ></td>
+                            <td
+                                class="border px-4 py-2"
+                                x-text="Number(model.context_length / 1000).toFixed(0)"
+                            ></td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+            <div class="mt-4">
+                <button
+                    @click="clearCache"
+                    class="rounded bg-red-500 px-4 py-2 font-bold text-white hover:bg-red-700"
+                >
+                    Clear Cache
+                </button>
+            </div>
+        </div>
+
+        <script>
+            function modelTable() {
+                return {
+                    models: [],
+                    filteredModels: [],
+                    sortKey: "",
+                    sortOrder: true,
+                    searchQuery: "",
+                    fetchData() {
+                        fetch("https://openrouter.ai/api/v1/models")
+                            .then((response) => response.json())
+                            .then((data) => {
+                                this.models = data.data;
+                                this.filterModels();
+                            });
+                    },
+                    filterModels() {
+                        const regex = new RegExp(this.searchQuery, "i");
+                        this.filteredModels = this.models.filter((model) =>
+                            regex.test(model.id),
+                        );
+                    },
+                    resolvePath(path, obj) {
+                        return path.split(".").reduce((prev, curr) => {
+                            return prev ? prev[curr] : null;
+                        }, obj || self);
+                    },
+                    init() {
+                        this.$watch("searchQuery", () => {
+                            this.filterModels();
+                        });
+                    },
+                };
+            }
+        </script>
+    </body>
+</html>
