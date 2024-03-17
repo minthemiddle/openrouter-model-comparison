@@ -10,3 +10,6 @@ View is not mobile optimized.
 Local: `open index.html`  
 Hosted: `openrouter.martinbetz.eu`  
 Filter: `gpt|claude|mistral` to compare matching models.
+
+**Screenshot**  
+![Screenshot](screenshot.png)
