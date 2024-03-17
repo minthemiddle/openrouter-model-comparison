@@ -92,12 +92,27 @@
                     sortOrder: true,
                     searchQuery: "",
                     fetchData() {
-                        fetch("https://openrouter.ai/api/v1/models")
-                            .then((response) => response.json())
-                            .then((data) => {
-                                this.models = data.data;
-                                this.filterModels();
-                            });
+                        const cachedModels =
+                            localStorage.getItem("modelsCache");
+                        if (cachedModels) {
+                            this.models = JSON.parse(cachedModels);
+                            this.filterModels();
+                        } else {
+                            fetch("https://openrouter.ai/api/v1/models")
+                                .then((response) => response.json())
+                                .then((data) => {
+                                    this.models = data.data;
+                                    localStorage.setItem(
+                                        "modelsCache",
+                                        JSON.stringify(this.models),
+                                    );
+                                    this.filterModels();
+                                });
+                        }
+                    },
+                    clearCache() {
+                        localStorage.removeItem("modelsCache");
+                        this.fetchData(); // Fetch the latest version from the API
                     },
                     filterModels() {
                         const regex = new RegExp(this.searchQuery, "i");
