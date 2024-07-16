@@ -47,6 +47,8 @@
                             Completion (mio.)
                         </th>
                         <th class="border px-4 py-2">Context (k)</th>
+                        <th class="border px-4 py-2">Value</th>
+                        <th class="border px-4 py-2">Value per Buck</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -68,6 +70,18 @@
                             <td
                                 class="border px-4 py-2"
                                 x-text="Number(model.context_length / 1000).toFixed(0)"
+                            ></td>
+                            <td class="border px-4 py-2">
+                                <input
+                                    type="number"
+                                    x-model="model.value"
+                                    @input="calculateValuePerBuck(model)"
+                                    class="w-full"
+                                />
+                            </td>
+                            <td
+                                class="border px-4 py-2"
+                                x-text="model.valuePerBuck"
                             ></td>
                         </tr>
                     </template>
@@ -91,17 +105,43 @@
                     sortKey: "",
                     sortOrder: true,
                     searchQuery: "",
+                    calculateValuePerBuck(model) {
+                        if (
+                            !model.value ||
+                            !model.pricing.prompt ||
+                            !model.pricing.completion
+                        ) {
+                            model.valuePerBuck = "N/A";
+                        } else {
+                            const promptValue =
+                                model.value / (model.pricing.prompt * 1000000);
+                            const completionValue =
+                                model.value /
+                                (model.pricing.completion * 1000000);
+                            model.valuePerBuck = (
+                                promptValue + completionValue
+                            ).toFixed(2);
+                        }
+                    },
                     fetchData() {
                         const cachedModels =
                             localStorage.getItem("modelsCache");
                         if (cachedModels) {
                             this.models = JSON.parse(cachedModels);
+                            this.models.forEach((model) => {
+                                model.value = "";
+                                model.valuePerBuck = "N/A";
+                            });
                             this.filterModels();
                         } else {
                             fetch("https://openrouter.ai/api/v1/models")
                                 .then((response) => response.json())
                                 .then((data) => {
                                     this.models = data.data;
+                                    this.models.forEach((model) => {
+                                        model.value = "";
+                                        model.valuePerBuck = "N/A";
+                                    });
                                     localStorage.setItem(
                                         "modelsCache",
                                         JSON.stringify(this.models),
