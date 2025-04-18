@@ -48,7 +48,6 @@
                         </th>
                         <th class="border px-4 py-2">Context (k)</th>
                         <th class="border px-4 py-2">Created</th>
-                        <th class="border px-4 py-2">Value per Buck (1$)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -75,10 +74,6 @@
                                 class="border px-4 py-2"
                                 x-text="new Date(model.created * 1000).toLocaleDateString('en-US')"
                             ></td>
-                            <td
-                                class="border px-4 py-2"
-                                x-text="model.valuePerBuck"
-                            ></td>
                         </tr>
                     </template>
                 </tbody>
@@ -89,12 +84,6 @@
                     class="rounded bg-red-500 px-4 py-2 font-bold text-white hover:bg-red-700"
                 >
                     Clear Cache
-                </button>
-                <button
-                    @click="sortByValuePerBuck"
-                    class="ml-2 rounded bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-700"
-                >
-                    Sort by Value per Buck
                 </button>
             </div>
         </div>
@@ -107,45 +96,17 @@
                     sortKey: "",
                     sortOrder: true,
                     searchQuery: "",
-                    calculateValuePerBuck(model) {
-                        if (model.pricing?.prompt && model.pricing?.completion) {
-                            const promptValue = 1 / (model.pricing.prompt * 1000000);
-                            const completionValue = 1 / (model.pricing.completion * 1000000);
-                            model.valuePerBuck = (promptValue + completionValue).toFixed(2);
-                        }
-                    },
-                    sortByValuePerBuck() {
-                        this.filteredModels.sort((a, b) => {
-                            if (
-                                a.valuePerBuck === "N/A" &&
-                                b.valuePerBuck === "N/A"
-                            )
-                                return 0;
-                            if (a.valuePerBuck === "N/A") return 1;
-                            if (b.valuePerBuck === "N/A") return -1;
-                            return (
-                                parseFloat(b.valuePerBuck) -
-                                parseFloat(a.valuePerBuck)
-                            );
-                        });
-                    },
                     fetchData() {
                         const cachedModels =
                             localStorage.getItem("modelsCache");
                         if (cachedModels) {
                             this.models = JSON.parse(cachedModels);
-                            this.models.forEach((model) => {
-                                this.calculateValuePerBuck(model);
-                            });
                             this.filterModels();
                         } else {
                             fetch("https://openrouter.ai/api/v1/models")
                                 .then((response) => response.json())
                                 .then((data) => {
                                     this.models = data.data;
-                                    this.models.forEach((model) => {
-                                        this.calculateValuePerBuck(model);
-                                    });
                                     localStorage.setItem(
                                         "modelsCache",
                                         JSON.stringify(this.models),
