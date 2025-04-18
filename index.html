@@ -27,13 +27,14 @@
                     x-model="searchQuery"
                     placeholder="Search by ID (e.g. gpt|claude|mistral)"
                     class="w-full border px-4 py-2"
+                    @input.debounce.300ms="filterModels"
                 />
             </div>
             <table class="mt-4 w-full border-collapse text-left">
                 <thead>
                     <tr>
-                        <th class="border px-4 py-2">ID</th>
-                        <th class="border px-4 py-2">Name</th>
+                        <th class="border px-4 py-2" @click="sort('id')">ID</th>
+                        <th class="border px-4 py-2" @click="sort('name')">Name</th>
                         <th
                             class="border px-4 py-2"
                             @click="sort('pricing.prompt')"
@@ -46,8 +47,8 @@
                         >
                             Completion (mio.)
                         </th>
-                        <th class="border px-4 py-2">Context (k)</th>
-                        <th class="border px-4 py-2">Created</th>
+                        <th class="border px-4 py-2" @click="sort('context_length')">Context (k)</th>
+                        <th class="border px-4 py-2" @click="sort('created')">Created</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -60,19 +61,19 @@
                             ></td>
                             <td
                                 class="border px-4 py-2"
-                                x-text="Number(model.pricing.prompt * 1000000).toFixed(2)"
+                                x-text="model.pricing?.prompt ? Number(model.pricing.prompt * 1000000).toFixed(2) : 'N/A'"
                             ></td>
                             <td
                                 class="border px-4 py-2"
-                                x-text="Number(model.pricing.completion * 1000000).toFixed(2)"
+                                x-text="model.pricing?.completion ? Number(model.pricing.completion * 1000000).toFixed(2) : 'N/A'"
                             ></td>
                             <td
                                 class="border px-4 py-2"
-                                x-text="Number(model.context_length / 1000).toFixed(0)"
+                                x-text="model.context_length ? Number(model.context_length / 1000).toFixed(0) : 'N/A'"
                             ></td>
                             <td
                                 class="border px-4 py-2"
-                                x-text="new Date(model.created * 1000).toLocaleDateString('en-US')"
+                                x-text="model.created ? new Date(model.created * 1000).toLocaleDateString('en-US') : 'N/A'"
                             ></td>
                         </tr>
                     </template>
@@ -94,23 +95,34 @@
                     models: [],
                     filteredModels: [],
                     sortKey: "",
-                    sortOrder: true,
+                    sortOrder: true, // true for ascending, false for descending
                     searchQuery: "",
                     fetchData() {
                         const cachedModels =
                             localStorage.getItem("modelsCache");
                         if (cachedModels) {
                             this.models = JSON.parse(cachedModels);
-                            this.filterModels();
+                            this.filterModels(); // Apply initial filter/sort
                         } else {
                             fetch("https://openrouter.ai/api/v1/models")
                                 .then((response) => response.json())
                                 .then((data) => {
-                                    this.models = data.data;
-                                    localStorage.setItem(
-                                        "modelsCache",
-                                        JSON.stringify(this.models),
-                                    );
+                                    // Ensure data.data exists and is an array
+                                    if (data && Array.isArray(data.data)) {
+                                        this.models = data.data;
+                                        localStorage.setItem(
+                                            "modelsCache",
+                                            JSON.stringify(this.models),
+                                        );
+                                    } else {
+                                        console.error("Invalid data format received from API:", data);
+                                        this.models = []; // Set to empty array on error
+                                    }
+                                    this.filterModels(); // Apply initial filter/sort
+                                })
+                                .catch(error => {
+                                    console.error("Error fetching models:", error);
+                                    this.models = []; // Set to empty array on fetch error
                                     this.filterModels();
                                 });
                         }
@@ -120,20 +132,73 @@
                         this.fetchData(); // Fetch the latest version from the API
                     },
                     filterModels() {
-                        const regex = new RegExp(this.searchQuery, "i");
-                        this.filteredModels = this.models.filter((model) =>
-                            regex.test(model.id),
-                        );
+                        let tempModels = [...this.models];
+
+                        // Apply search filter
+                        if (this.searchQuery.trim()) {
+                            try {
+                                const regex = new RegExp(this.searchQuery.trim(), "i");
+                                tempModels = tempModels.filter((model) =>
+                                    regex.test(model.id),
+                                );
+                            } catch (e) {
+                                console.error("Invalid regex:", this.searchQuery);
+                                // Optionally clear the filtered models or show an error message
+                                tempModels = [];
+                            }
+                        }
+
+                        // Apply sorting
+                        if (this.sortKey) {
+                            tempModels.sort((a, b) => {
+                                let valA = this.resolvePath(this.sortKey, a);
+                                let valB = this.resolvePath(this.sortKey, b);
+
+                                // Handle potential null/undefined values during sort
+                                // Treat null/undefined as lowest value when ascending, highest when descending
+                                if (valA == null) valA = this.sortOrder ? -Infinity : Infinity;
+                                if (valB == null) valB = this.sortOrder ? -Infinity : Infinity;
+
+
+                                // Case-insensitive sort for strings
+                                if (typeof valA === 'string' && typeof valB === 'string') {
+                                    valA = valA.toLowerCase();
+                                    valB = valB.toLowerCase();
+                                }
+
+                                let comparison = 0;
+                                if (valA > valB) {
+                                    comparison = 1;
+                                } else if (valA < valB) {
+                                    comparison = -1;
+                                }
+                                return this.sortOrder ? comparison : comparison * -1;
+                            });
+                        }
+
+                        this.filteredModels = tempModels;
                     },
                     resolvePath(path, obj) {
                         return path.split(".").reduce((prev, curr) => {
-                            return prev ? prev[curr] : null;
+                            // Check if prev is an object and has the property curr
+                            // Return undefined if path is invalid to allow null checks in sort
+                            return (prev && typeof prev === 'object' && prev.hasOwnProperty(curr)) ? prev[curr] : undefined;
                         }, obj || self);
                     },
+                    sort(key) {
+                        if (this.sortKey === key) {
+                            this.sortOrder = !this.sortOrder; // Toggle order
+                        } else {
+                            this.sortKey = key;
+                            this.sortOrder = true; // Default to ascending
+                        }
+                        this.filterModels(); // Re-apply filters and sort
+                    },
                     init() {
-                        this.$watch("searchQuery", () => {
-                            this.filterModels();
-                        });
+                        // No need for explicit watch, @input calls filterModels directly
+                        // this.$watch("searchQuery", () => {
+                        //     this.filterModels();
+                        // });
                     },
                 };
             }
