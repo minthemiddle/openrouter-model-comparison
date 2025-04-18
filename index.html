@@ -117,13 +117,7 @@
                     sortOrder: true,
                     searchQuery: "",
                     calculateValuePerBuck(model) {
-                        if (
-                            !model.value ||
-                            !model.pricing.prompt ||
-                            !model.pricing.completion
-                        ) {
-                            model.valuePerBuck = "N/A";
-                        } else {
+                        if (model.pricing?.prompt && model.pricing?.completion) {
                             const promptValue =
                                 model.value / (model.pricing.prompt * 1000000);
                             const completionValue =
@@ -155,8 +149,8 @@
                         if (cachedModels) {
                             this.models = JSON.parse(cachedModels);
                             this.models.forEach((model) => {
-                                model.value = "";
-                                model.valuePerBuck = "N/A";
+                                model.value = "1"; // Default value of 1
+                                this.calculateValuePerBuck(model);
                             });
                             this.filterModels();
                         } else {
@@ -165,8 +159,8 @@
                                 .then((data) => {
                                     this.models = data.data;
                                     this.models.forEach((model) => {
-                                        model.value = "";
-                                        model.valuePerBuck = "N/A";
+                                        model.value = "1"; // Default value of 1
+                                        this.calculateValuePerBuck(model);
                                     });
                                     localStorage.setItem(
                                         "modelsCache",
