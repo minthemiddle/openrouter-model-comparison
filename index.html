@@ -47,6 +47,7 @@
                             Completion (mio.)
                         </th>
                         <th class="border px-4 py-2">Context (k)</th>
+                        <th class="border px-4 py-2">Created</th>
                         <th class="border px-4 py-2">Value</th>
                         <th class="border px-4 py-2">Value per Buck</th>
                     </tr>
@@ -70,6 +71,10 @@
                             <td
                                 class="border px-4 py-2"
                                 x-text="Number(model.context_length / 1000).toFixed(0)"
+                            ></td>
+                            <td
+                                class="border px-4 py-2"
+                                x-text="new Date(model.created * 1000).toLocaleDateString()"
                             ></td>
                             <td class="border px-4 py-2">
                                 <input
