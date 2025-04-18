@@ -4,9 +4,9 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>OpenRouter Model Comparison</title>
-        <!-- For Dev: <link
+        <!-- <link
             rel="stylesheet"
-            href="https://cdn.curlwind.com?classes=w-full,border,py-2,container,mx-auto,ml-2,text-xl,font-bold,px-4,py-5,mt-4,rounded,bg-red-500,,text-white,hover:bg-red-700"
+            href="https://cdn.curlwind.com?classes=w-full,border,py-2,container,mx-auto,ml-2,text-xl,font-bold,px-4,py-5,mt-4,rounded,bg-red-500,bg-blue-500,text-white,hover:bg-red-700"
         /> -->
         <link rel="stylesheet" href="style.css" />
         <script
@@ -94,6 +94,12 @@
                 >
                     Clear Cache
                 </button>
+                <button
+                    @click="sortByValuePerBuck"
+                    class="ml-2 rounded bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-700"
+                >
+                    Sort by Value per Buck
+                </button>
             </div>
         </div>
 
@@ -122,6 +128,21 @@
                                 promptValue + completionValue
                             ).toFixed(2);
                         }
+                    },
+                    sortByValuePerBuck() {
+                        this.filteredModels.sort((a, b) => {
+                            if (
+                                a.valuePerBuck === "N/A" &&
+                                b.valuePerBuck === "N/A"
+                            )
+                                return 0;
+                            if (a.valuePerBuck === "N/A") return 1;
+                            if (b.valuePerBuck === "N/A") return -1;
+                            return (
+                                parseFloat(b.valuePerBuck) -
+                                parseFloat(a.valuePerBuck)
+                            );
+                        });
                     },
                     fetchData() {
                         const cachedModels =
